@@ -36,22 +36,18 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          if [ -z "$SUPABASE_URL" ]; then
-            echo "Configure o segredo SUPABASE_URL."
-            exit 1
-          fi
-          if [ -z "$SUPABASE_ANON_KEY" ]; then
-            echo "Configure o segredo SUPABASE_ANON_KEY."
-            exit 1
-          fi
           mkdir -p _site/js
           python - <<'PY'
           import json, os
           from pathlib import Path
+          local_path = Path("js/config.json")
+          config = json.loads(local_path.read_text(encoding="utf-8")) if local_path.exists() else {}
           config = {
-              "url": os.environ["SUPABASE_URL"],
-              "anonKey": os.environ["SUPABASE_ANON_KEY"],
+              "url": os.environ.get("SUPABASE_URL") or config.get("url", ""),
+              "anonKey": os.environ.get("SUPABASE_ANON_KEY") or config.get("anonKey", ""),
           }
+          if not config["url"] or not config["anonKey"]:
+              raise SystemExit("Configure SUPABASE_URL e SUPABASE_ANON_KEY nos segredos ou forneça js/config.json.")
           Path("_site/js/config.json").write_text(json.dumps(config), encoding="utf-8")
           PY
 
