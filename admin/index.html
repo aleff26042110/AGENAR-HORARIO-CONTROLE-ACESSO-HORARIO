@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Painel administrativo · Agenda Josi</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../js/config.js"></script>
+<script src="../js/supabase-client.js"></script>
+<style>
+:root{--bg:#fbf7f8;--card:#fff;--text:#30282d;--muted:#81757c;--accent:#9b6f82;--accent-dark:#765166;--line:#eadfe4;--ok:#3d7a4e;--warn:#a23f52}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh}
+.wrap{width:min(100% - 32px,1080px);margin:0 auto;padding:18px 0 40px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.top h1{font-size:22px;margin:0}
+.top p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.btn{padding:12px 16px;border-radius:12px;border:1px solid var(--line);background:#fff;font-weight:700;font-size:13px;cursor:pointer;min-height:44px}
+.btn.primary{background:var(--accent);color:#fff;border:0}
+.cards{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
+@media(min-width:760px){.cards{grid-template-columns:repeat(4,1fr)}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px}
+.card strong{font-size:24px;display:block}
+.card span{color:var(--muted);font-size:12px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:14px}
+.panel h2{margin:0 0 4px;font-size:17px}
+.panel p.sub{margin:0 0 12px;color:var(--muted);font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:10px 8px;border-top:1px solid #f1e9e4;vertical-align:top}
+th{border:0;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+tr:first-child th, tr:first-child td{border-top:0}
+input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fffefd;color:var(--text)}
+.form-grid{display:grid;gap:10px}
+@media(min-width:760px){.form-grid.two{grid-template-columns:1fr 1fr}.form-grid.three{grid-template-columns:1fr 1fr 1fr}}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#f4ecef;color:var(--accent-dark)}
+.badge.Ativo{background:#e6f2e9;color:var(--ok)}
+.badge.Vencido,.badge.Bloqueado,.badge.Suspenso{background:#f9e9e8;color:var(--warn)}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+.actions .btn{padding:8px 10px;min-height:44px;font-size:12px}
+.msg{min-height:18px;font-size:13px;color:var(--warn);margin-top:10px}
+.msg.ok{color:var(--ok)}
+.scroll{overflow-x:auto}
+.scroll table{min-width:640px}
+label.fl{display:grid;gap:6px;font-size:12px;font-weight:700;color:#665651}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>Painel administrativo</h1>
+      <p id="adminEmail">Verificando acesso…</p>
+    </div>
+    <div class="actions">
+      <button class="btn" id="btnAgenda" type="button">Ver agenda</button>
+      <button class="btn" id="btnSair" type="button">Sair</button>
+    </div>
+  </div>
+
+  <div id="guard" class="panel"><p class="sub">Conectando ao Supabase…</p></div>
+
+  <div id="content" hidden>
+    <div class="cards">
+      <div class="card"><strong id="stProf">0</strong><span>profissionais</span></div>
+      <div class="card"><strong id="stCli">0</strong><span>clientes</span></div>
+      <div class="card"><strong id="stApt">0</strong><span>agendamentos</span></div>
+      <div class="card"><strong id="stVenc">0</strong><span>vencidas/bloqueadas</span></div>
+    </div>
+
+    <section class="panel">
+      <h2>Cadastrar profissional</h2>
+      <p class="sub">Cria o registro da profissional. Depois vincule o login em “Usuários” pelo user_id.</p>
+      <div class="form-grid three">
+        <label class="fl">Nome<input id="npNome" placeholder="Ex.: Josi Maria"></label>
+        <label class="fl">E-mail / login<input id="npEmail" type="email" placeholder="profissional@exemplo.com"></label>
+        <label class="fl">Especialidade<input id="npEsp" placeholder="Ex.: sobrancelhas"></label>
+      </div>
+      <div class="form-grid two" style="margin-top:10px">
+        <label class="fl">Plano inicial<select id="npPlano"></select></label>
+        <label class="fl">Status inicial<select id="npStatus"><option>Ativo</option><option>Vencido</option><option>Bloqueado</option><option>Suspenso</option></select></label>
+      </div>
+      <button class="btn primary" id="btnNovaProf" type="button" style="margin-top:12px">Cadastrar</button>
+      <div class="msg" id="msgProf"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Profissionais e assinaturas</h2>
+      <p class="sub">Altere vencimento e status. O bloqueio vale na hora: a agenda entra em modo leitura.</p>
+      <div class="scroll"><table id="tblProf">
+        <thead><tr><th>Profissional</th><th>Plano / vencimento</th><th>Status</th><th>Ações</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </section>
+
+    <section class="panel">
+      <h2>Usuários e permissões</h2>
+      <p class="sub">Papel só muda aqui. O sistema impede que profissional vire administradora sozinha (RLS).</p>
+      <div class="scroll"><table id="tblUsers">
+        <thead><tr><th>E-mail</th><th>Papel</th><th>Vincular profissional (user_id)</th><th>Ações</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <div class="msg" id="msgUsers"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Planos</h2>
+      <p class="sub">Base para assinatura manual. Gateway de pagamento futuro entra aqui sem mudar a agenda.</p>
+      <div class="scroll"><table id="tblPlans">
+        <thead><tr><th>Nome</th><th>Preço (R$)</th><th>Descrição</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </section>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = (s) => document.querySelector(s);
+let supabase = null;
+const STATUSES = ['Ativo','Vencido','Bloqueado','Suspenso'];
+
+function msg(el, t, ok=false){ el.textContent = t; el.classList.toggle('ok', ok); }
+
+function localDateISO(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function localDateOffsetISO(days) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return localDateISO(date);
+}
+
+async function boot(){
+  try {
+    const r = await window.JosiSupabase.init({ requireSession: true });
+    supabase = r.supabase;
+  } catch(e) {
+    $('#guard').innerHTML = '<p class="sub">Conexão indisponível. Fale com a administradora do sistema.</p>';
+    return;
+  }
+  const ctx = await window.JosiSupabase.loadContext(supabase);
+  if (!ctx.profile || ctx.profile.role !== 'administrador') {
+    $('#guard').innerHTML = '<p class="sub">Acesso negado. Este painel é só para administradoras. <a href="../login/">Voltar ao login</a></p>';
+    try { await supabase.auth.signOut(); } catch {}
+    return;
+  }
+  $('#adminEmail').textContent = 'Logada como ' + (ctx.profile.email || ctx.user.email);
+  $('#guard').hidden = true;
+  $('#content').hidden = false;
+  await refreshAll();
+}
+
+async function refreshAll(){
+  const [{count: cProf}, {count: cCli}, {count: cApt}] = await Promise.all([
+    supabase.from('professionals').select('id', {count:'exact', head:true}),
+    supabase.from('clients').select('id', {count:'exact', head:true}),
+    supabase.from('appointments').select('id', {count:'exact', head:true}),
+  ]);
+  $('#stProf').textContent = cProf ?? 0;
+  $('#stCli').textContent = cCli ?? 0;
+  $('#stApt').textContent = cApt ?? 0;
+
+  const { data: plans } = await supabase.from('plans').select('*').order('nome');
+  const planSel = $('#npPlano');
+  planSel.replaceChildren();
+  (plans||[]).forEach(p => {
+    const o = document.createElement('option');
+    o.value = p.id; o.textContent = `${p.nome} — R$ ${Number(p.preco).toFixed(2)}`;
+    planSel.append(o);
+  });
+  $('#tblPlans tbody').replaceChildren();
+  (plans||[]).forEach(p => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><strong></strong></td><td></td><td></td>`;
+    tr.children[0].textContent = p.nome;
+    tr.children[1].textContent = Number(p.preco).toFixed(2);
+    tr.children[2].textContent = p.descricao || '';
+    $('#tblPlans tbody').append(tr);
+  });
+
+  const { data: profs } = await supabase.from('professionals').select('*').order('nome');
+  const { data: subs } = await supabase.from('subscriptions').select('*, plans(nome)').order('vencimento', {ascending:false});
+  const subByProf = {};
+  (subs||[]).forEach(s => { if (!subByProf[s.professional_id]) subByProf[s.professional_id] = s; });
+  const today = localDateISO();
+  let vencidas = (subs||[]).filter(s => s.vencimento < today || ['Vencido','Bloqueado','Suspenso'].includes(s.status)).length;
+  $('#stVenc').textContent = vencidas;
+
+  const tb = $('#tblProf tbody');
+  tb.replaceChildren();
+  (profs||[]).forEach(pr => {
+    const sub = subByProf[pr.id];
+    const tr = document.createElement('tr');
+    const tdP = document.createElement('td');
+    tdP.innerHTML = `<strong></strong><br><small></small>`;
+    tdP.querySelector('strong').textContent = pr.nome;
+    tdP.querySelector('small').textContent = `${pr.email || ''} · ${pr.especialidade || ''}`;
+    const tdS = document.createElement('td');
+    tdS.innerHTML = `<span></span><br><small></small>`;
+    tdS.querySelector('span').textContent = sub ? (sub.plans ? sub.plans.nome : sub.plan_id || '—') : 'Sem assinatura';
+    tdS.querySelector('small').textContent = sub ? `vence em ${sub.vencimento} (${sub.status})` : '';
+    const tdSt = document.createElement('td');
+    const badge = document.createElement('span');
+    badge.className = 'badge ' + pr.status;
+    badge.textContent = pr.status;
+    tdSt.append(badge);
+    const tdA = document.createElement('td');
+    const selStatus = document.createElement('select');
+    STATUSES.forEach(s => { const o=document.createElement('option'); o.value=s; o.textContent=s; if(s===pr.status) o.selected=true; selStatus.append(o); });
+    const inpVenc = document.createElement('input');
+    inpVenc.type = 'date'; inpVenc.value = sub ? sub.vencimento : '';
+    inpVenc.title = 'Vencimento da assinatura';
+    const btnSalvar = document.createElement('button');
+    btnSalvar.className = 'btn'; btnSalvar.textContent = 'Salvar';
+    btnSalvar.addEventListener('click', async () => {
+      btnSalvar.disabled = true;
+      try {
+        const { error: e1 } = await supabase.from('professionals').update({ status: selStatus.value }).eq('id', pr.id);
+        if (e1) throw e1;
+        if (sub) {
+          const { error: e2 } = await supabase.from('subscriptions')
+            .update({ status: selStatus.value, vencimento: inpVenc.value || sub.vencimento })
+            .eq('id', sub.id);
+          if (e2) throw e2;
+        } else if (planSel.value) {
+          const { error: e3 } = await supabase.from('subscriptions').insert({
+            professional_id: pr.id, plan_id: planSel.value, status: selStatus.value,
+            inicio: localDateISO(), vencimento: inpVenc.value || localDateOffsetISO(30)
+          });
+          if (e3) throw e3;
+        }
+        await refreshAll();
+      } catch(err) { alert('Não foi possível salvar: ' + err.message); }
+      finally { btnSalvar.disabled = false; }
+    });
+    const wrap = document.createElement('div');
+    wrap.className = 'actions';
+    selStatus.style.maxWidth = '130px'; inpVenc.style.maxWidth = '150px';
+    wrap.append(selStatus, inpVenc, btnSalvar);
+    tdA.append(wrap);
+    tr.append(tdP, tdS, tdSt, tdA);
+    tb.append(tr);
+  });
+
+  // Usuários
+  const { data: users } = await supabase.from('profiles').select('*').order('email');
+  const tu = $('#tblUsers tbody');
+  tu.replaceChildren();
+  (users||[]).forEach(u => {
+    const tr = document.createElement('tr');
+    const tdE = document.createElement('td'); tdE.textContent = u.email;
+    const tdR = document.createElement('td');
+    const sel = document.createElement('select');
+    ['profissional','administrador'].forEach(r => { const o=document.createElement('option'); o.value=r; o.textContent=r; if(r===u.role) o.selected=true; sel.append(o); });
+    sel.style.maxWidth = '150px';
+    tdR.append(sel);
+    const tdV = document.createElement('td');
+    const linked = (profs||[]).find(p => p.user_id === u.id);
+    const inp = document.createElement('input');
+    inp.placeholder = 'UUID do login';
+    inp.value = u.id;
+    inp.readOnly = true;
+    inp.title = 'Copie este id para professionals.user_id no SQL Editor, ou use o seletor ao lado';
+    const profSel = document.createElement('select');
+    const none = document.createElement('option'); none.value=''; none.textContent = linked ? `Vinculada: ${linked.nome}` : 'Sem vínculo';
+    profSel.append(none);
+    (profs||[]).forEach(p => { const o=document.createElement('option'); o.value=p.id; o.textContent=p.nome; profSel.append(o); });
+    tdV.append(inp, profSel);
+    const tdA = document.createElement('td');
+    const btn = document.createElement('button');
+    btn.className='btn'; btn.textContent='Salvar';
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      try {
+        const { error } = await supabase.from('profiles').update({ role: sel.value }).eq('id', u.id);
+        if (error) throw error;
+        if (profSel.value) {
+          const { error: e2 } = await supabase.from('professionals').update({ user_id: u.id }).eq('id', profSel.value);
+          if (e2) throw e2;
+        }
+        msg($('#msgUsers'), 'Salvo.', true);
+        await refreshAll();
+      } catch(err) { msg($('#msgUsers'), 'Erro: ' + err.message); }
+      finally { btn.disabled = false; }
+    });
+    tdA.append(btn);
+    tr.append(tdE, tdR, tdV, tdA);
+    tu.append(tr);
+  });
+}
+
+$('#btnNovaProf').addEventListener('click', async () => {
+  const m = $('#msgProf'); msg(m, '');
+  const nome = $('#npNome').value.trim(), email = $('#npEmail').value.trim(), esp = $('#npEsp').value.trim();
+  if (!nome || !email) { msg(m, 'Informe nome e e-mail da profissional.'); return; }
+  try {
+    const { data: pr, error } = await supabase.from('professionals')
+      .insert({ nome, email, especialidade: esp || 'sobrancelhas', status: $('#npStatus').value })
+      .select('id').single();
+    if (error) throw error;
+    if ($('#npPlano').value) {
+      const { error: e2 } = await supabase.from('subscriptions').insert({
+        professional_id: pr.id, plan_id: $('#npPlano').value, status: $('#npStatus').value,
+        inicio: localDateISO(),
+        vencimento: localDateOffsetISO(30)
+      });
+      if (e2) throw e2;
+    }
+    // Serviços padrão da nova profissional (pode ajustar depois).
+    const defaults = ['Design de sobrancelhas','Manutenção','Avaliação'];
+    await supabase.from('services').insert(defaults.map(n => ({ professional_id: pr.id, nome: n })));
+    msg(m, 'Profissional cadastrada.', true);
+    $('#npNome').value = $('#npEmail').value = $('#npEsp').value = '';
+    await refreshAll();
+  } catch(err) { msg(m, 'Erro: ' + err.message); }
+});
+
+$('#btnSair').addEventListener('click', async () => { await window.JosiSupabase.signOutAndGoLogin(supabase); });
+$('#btnAgenda').addEventListener('click', () => { window.location.href = '../site-josi/'; });
+
+boot();
+})();
+</script>
+</body>
+</html>

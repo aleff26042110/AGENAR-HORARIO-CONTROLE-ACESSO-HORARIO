@@ -1,0 +1,82 @@
+name: Publicar agenda no GitHub Pages
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o repositório
+        uses: actions/checkout@v4
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validar JavaScript e regras de agenda
+        run: |
+          node --test tests/billing-logic.test.mjs tests/public-booking.test.mjs
+          node --check site-josi/app.js
+          node --check agendar/app.js
+          node --check js/booking-logic.js
+
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Preparar configuração pública do Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ]; then
+            echo "Configure o segredo SUPABASE_URL."
+            exit 1
+          fi
+          if [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "Configure o segredo SUPABASE_ANON_KEY."
+            exit 1
+          fi
+          mkdir -p _site/js
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          config = {
+              "url": os.environ["SUPABASE_URL"],
+              "anonKey": os.environ["SUPABASE_ANON_KEY"],
+          }
+          Path("_site/js/config.json").write_text(json.dumps(config), encoding="utf-8")
+          PY
+
+      - name: Copiar somente os arquivos publicados
+        run: |
+          cp index.html .nojekyll _site/
+          cp -R agendar admin login site-josi site-gi-yasmin _site/
+          cp js/config.js js/supabase-client.js js/booking-logic.js _site/js/
+
+      - name: Enviar os arquivos para o GitHub Pages
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publicar
+        id: deployment
+        uses: actions/deploy-pages@v4

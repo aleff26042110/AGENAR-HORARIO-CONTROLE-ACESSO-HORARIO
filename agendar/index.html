@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f7f2ee" />
+    <meta name="description" content="Agende seu horário com Josi Maria." />
+    <title>Agende seu horário · Josi Maria</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/supabase-client.js"></script>
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <div class="booking-shell">
+      <header class="public-header">
+        <a class="brand" href="./" aria-label="Página de agendamento da Josi">
+          <span class="brand-mark" id="brand-mark" aria-hidden="true">JM</span>
+          <span class="brand-copy"><span class="eyebrow">AGENDA ONLINE</span><strong id="professional-name">Josi Maria</strong></span>
+        </a>
+        <span class="header-note">Atendimento com hora marcada</span>
+      </header>
+
+      <main>
+        <section class="booking-hero" aria-labelledby="page-title">
+          <div class="hero-copy">
+            <span class="hero-kicker"><i aria-hidden="true"></i> SEU MOMENTO DE CUIDADO</span>
+            <h1 id="page-title">Um horário para <em>você.</em></h1>
+            <p id="professional-specialty">Escolha o procedimento e encontre o melhor horário para você.</p>
+          </div>
+          <div class="hero-art" aria-hidden="true"><span>✳</span><i></i></div>
+        </section>
+
+        <ol class="step-progress" aria-label="Etapas do agendamento">
+          <li class="step-active"><span>1</span><b>Procedimento</b></li>
+          <li><span>2</span><b>Data e horário</b></li>
+          <li><span>3</span><b>Seus dados</b></li>
+        </ol>
+
+        <form id="public-booking-form" class="booking-card">
+          <section class="form-section" aria-labelledby="service-title">
+            <div class="section-title">
+              <span class="section-number">01</span>
+              <div><span class="eyebrow">ESCOLHA O SERVIÇO</span><h2 id="service-title">Qual procedimento?</h2></div>
+            </div>
+            <div id="service-catalog" class="service-catalog" role="group" aria-label="Procedimentos disponíveis" aria-busy="true">
+              <p class="catalog-message">Carregando procedimentos…</p>
+            </div>
+            <select id="service-select" class="service-select-sync" name="service" aria-hidden="true" tabindex="-1" disabled>
+              <option value="">Selecione um procedimento</option>
+            </select>
+            <div id="service-summary" class="service-summary" aria-live="polite">
+              <span>Selecione um procedimento para ver o valor e a duração.</span>
+            </div>
+          </section>
+
+          <section class="form-section" aria-labelledby="date-title">
+            <div class="section-title">
+              <span class="section-number">02</span>
+              <div><span class="eyebrow">CONSULTE A AGENDA</span><h2 id="date-title">Quando você pode?</h2></div>
+            </div>
+            <label class="field" for="date-input">
+              <span>Escolha uma data</span>
+              <input id="date-input" name="date" type="date" required disabled />
+            </label>
+            <div class="slot-heading"><span>Horários disponíveis</span><span id="slot-hint">Escolha o procedimento e a data</span></div>
+            <div id="slot-list" class="slot-list" role="group" aria-label="Horários disponíveis" aria-live="polite">
+              <p class="slot-empty">Os horários livres aparecerão aqui.</p>
+            </div>
+            <input id="selected-time" name="time" type="hidden" required />
+          </section>
+
+          <section class="form-section" aria-labelledby="client-title">
+            <div class="section-title">
+              <span class="section-number">03</span>
+              <div><span class="eyebrow">SÓ MAIS UM PASSO</span><h2 id="client-title">Seus dados</h2></div>
+            </div>
+            <div class="client-fields">
+              <label class="field" for="client-name"><span>Seu nome</span><input id="client-name" name="name" type="text" autocomplete="name" maxlength="80" placeholder="Como podemos te chamar?" required /></label>
+              <label class="field" for="client-phone"><span>WhatsApp</span><input id="client-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="30" placeholder="(11) 99999-9999" required /></label>
+              <label class="field field-wide" for="client-notes"><span>Observações <small>opcional</small></span><textarea id="client-notes" name="notes" rows="3" maxlength="400" placeholder="Alguma informação para a Josi?"></textarea></label>
+            </div>
+            <p class="privacy-note">Seu telefone e as observações serão usados somente para organizar este agendamento.</p>
+            <button id="confirm-booking" class="primary-button" type="submit" disabled>Confirmar agendamento <span aria-hidden="true">→</span></button>
+            <p id="form-status" class="form-status" role="status" aria-live="polite"></p>
+          </section>
+        </form>
+
+        <section id="confirmation" class="confirmation-card" aria-labelledby="confirmation-title" hidden>
+          <span class="confirmation-mark" aria-hidden="true">✓</span>
+          <span class="eyebrow">TUDO CERTO</span>
+          <h2 id="confirmation-title">Agendamento confirmado!</h2>
+          <p class="confirmation-copy">Sua reserva já está na agenda da Josi. Para avisá-la, toque no botão abaixo e envie a mensagem pelo WhatsApp.</p>
+          <dl id="confirmation-details" class="confirmation-details"></dl>
+          <a id="share-confirmation" class="secondary-button" href="#" target="_blank" rel="noopener noreferrer" hidden>Enviar confirmação para a Josi <span aria-hidden="true">↗</span></a>
+          <button id="copy-link" class="text-button" type="button">Copiar link da agenda</button>
+          <p id="confirmation-status" class="form-status" role="status" aria-live="polite"></p>
+        </section>
+      </main>
+
+      <footer class="public-footer"><span class="footer-mark">JM</span><span id="footer-professional">Josi Maria</span><span>·</span><span>Feito com carinho</span></footer>
+    </div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>

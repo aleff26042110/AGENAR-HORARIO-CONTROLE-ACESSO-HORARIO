@@ -1,0 +1,13 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "valyu": {
+      "type": "local",
+      "command": ["npx", "-y", "@valyu/mcp-server"],
+      "enabled": true,
+      "environment": {
+        "VALYU_API_KEY": "{env:VALYU_API_KEY}"
+      }
+    }
+  }
+}

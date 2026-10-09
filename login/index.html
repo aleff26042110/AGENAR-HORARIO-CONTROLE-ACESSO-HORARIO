@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Entrar · Agenda Josi</title>
+  <meta name="description" content="Acesso à agenda profissional">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/supabase-client.js"></script>
+  <style>
+    :root{
+      --bg:#fbf7f8;--card:#fff;--text:#30282d;--muted:#81757c;
+      --accent:#9b6f82;--accent-dark:#765166;--line:#eadfe4;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;min-height:100dvh;display:grid;place-items:center;
+      padding:20px;background:radial-gradient(circle at top,#f5e9ee 0,#fbf7f8 45%,#f8f2f4 100%);
+      color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    .card{width:min(430px,100%);background:rgba(255,255,255,.94);border:1px solid var(--line);
+      border-radius:28px;padding:34px 28px;box-shadow:0 20px 60px rgba(76,46,61,.12)}
+    .brand{text-align:center;margin-bottom:20px}
+    .mark{width:58px;height:58px;margin:0 auto 14px;border-radius:18px;display:grid;place-items:center;
+      background:linear-gradient(145deg,#bd7775,#91474e);color:#fff;font-family:Georgia,serif;font-size:19px}
+    h1{margin:0 0 7px;font-size:27px;letter-spacing:-.5px}
+    .sub{margin:0;color:var(--muted);font-size:14px;line-height:1.5}
+    label{display:block;font-size:13px;font-weight:650;margin:16px 0 7px}
+    input{width:100%;padding:14px 15px;border:1px solid var(--line);border-radius:14px;
+      background:#fff;color:var(--text);font-size:15px;outline:none}
+    input:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(155,111,130,.10)}
+    button{width:100%;margin-top:22px;padding:14px;border:0;border-radius:14px;background:var(--accent);
+      color:white;font-weight:700;font-size:15px;cursor:pointer;min-height:50px}
+    button:hover{background:var(--accent-dark)}
+    button:disabled{opacity:.6;cursor:wait}
+    .status{min-height:20px;margin-top:14px;text-align:center;color:#a23f52;font-size:13px;line-height:1.5}
+    .status.ok{color:#3d7a4e}
+    .hint{margin-top:18px;text-align:center;color:var(--muted);font-size:12px;line-height:1.6}
+    details{margin-top:18px;border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:12px;color:var(--muted)}
+    details summary{cursor:pointer;font-weight:700;color:var(--text);font-size:13px}
+    details p{line-height:1.6}
+    .row{display:flex;gap:8px}
+    .row button{margin-top:12px}
+    .ghost{background:#f4ecef;color:var(--accent-dark)}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <section class="brand">
+      <div class="mark">JM</div>
+      <h1>Bem-vinda</h1>
+      <p class="sub">Entre para acessar sua agenda profissional.</p>
+    </section>
+
+    <form id="loginForm">
+      <label for="email">E-mail</label>
+      <input id="email" type="email" autocomplete="email" placeholder="seuemail@exemplo.com" required>
+
+      <label for="password">Senha</label>
+      <input id="password" type="password" autocomplete="current-password" placeholder="Sua senha" required>
+
+      <button type="submit" id="btnEntrar">Entrar</button>
+      <div id="status" class="status" role="status"></div>
+    </form>
+
+    <p class="hint" id="hint">Conectando…</p>
+  </main>
+
+  <script>
+    (() => {
+      'use strict';
+      const $ = (s) => document.querySelector(s);
+      const form = $('#loginForm'), status = $('#status'), hint = $('#hint');
+      const btn = $('#btnEntrar');
+      let supabase = null;
+
+      function msg(t, ok = false) {
+        status.textContent = t;
+        status.classList.toggle('ok', ok);
+      }
+
+      async function boot() {
+        try {
+          const r = await window.JosiSupabase.init();
+          supabase = r.supabase;
+          hint.textContent = 'Conectado ao banco. Faça login para continuar.';
+          // Já logada? encaminha conforme papel.
+          const { data } = await supabase.auth.getSession();
+          if (data.session) await routeByRole();
+        } catch (e) {
+          if (e.code === 'SUPABASE_NOT_CONFIGURED') {
+            hint.textContent = 'Conexão indisponível. Fale com a administradora do sistema.';
+          } else {
+            hint.textContent = 'Falha ao carregar: ' + e.message;
+          }
+        }
+      }
+
+      async function routeByRole() {
+        msg('Verificando acesso…', true);
+        const ctx = await window.JosiSupabase.loadContext(supabase);
+        if (!ctx.profile) { msg('Login sem perfil. Peça ao administrador para liberar seu acesso.'); return; }
+        if (ctx.profile.role === 'administrador') {
+          window.location.href = '../admin/';
+          return;
+        }
+        const block = window.JosiSupabase.accessBlocked(ctx.professional, ctx.subscription);
+        if (block.blocked) { msg(block.reason); await supabase.auth.signOut(); return; }
+        const next = new URLSearchParams(window.location.search).get('next');
+        const agendaRoutes = {
+          'site-josi': '../site-josi/',
+          'site-gi-yasmin': '../site-gi-yasmin/',
+        };
+        const agenda = ctx.professional?.identidade_visual?.agenda;
+        let destination = agendaRoutes[agenda] || '../site-josi/';
+        if (next) {
+          try {
+            const target = new URL(next, window.location.href);
+            if (target.origin === window.location.origin) destination = target.href;
+          } catch {}
+        }
+        window.location.href = destination;
+      }
+
+      form.addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        msg('');
+        if (!supabase) { msg('Conexão indisponível. Fale com a administradora do sistema.'); return; }
+        btn.disabled = true;
+        try {
+          const email = $('#email').value.trim();
+          const password = $('#password').value;
+          const { error } = await supabase.auth.signInWithPassword({ email, password });
+          if (error) {
+            msg(error.message === 'Invalid login credentials'
+              ? 'E-mail ou senha inválidos.'
+              : 'Não foi possível entrar: ' + error.message);
+            return;
+          }
+          await routeByRole();
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+      boot();
+    })();
+  </script>
+</body>
+</html>

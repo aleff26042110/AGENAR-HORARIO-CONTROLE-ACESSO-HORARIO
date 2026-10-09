@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f7f2ec" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="description" content="Agenda de atendimentos da nail designer Josi Maria." />
+    <title>Josi Maria · Agenda</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/supabase-client.js"></script>
+    <script src="../js/booking-logic.js"></script>
+    <script src="./app.js" defer></script>
+    <style>
+      .auth-gate[hidden], .page-shell[hidden] { display: none !important; }
+      .auth-gate { min-height: 100vh; display: grid; align-content: center; justify-items: center; gap: 12px; padding: 24px; text-align: center; color: #4b3440; font: 500 15px/1.5 "DM Sans", system-ui, sans-serif; }
+      .auth-gate a { color: #8c526b; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main id="auth-gate" class="auth-gate" role="status" aria-live="polite">
+      <strong id="auth-gate-title">Verificando seu acesso…</strong>
+      <span id="auth-gate-message">A agenda privada só abre para uma profissional autenticada.</span>
+      <a id="auth-gate-login" href="../login/" hidden>Ir para o login</a>
+    </main>
+    <div class="page-shell" id="page-shell" hidden>
+      <header class="topbar">
+        <a class="brand" href="#inicio" aria-label="Josi Maria, início">
+          <span class="brand-mark" aria-hidden="true">JM</span>
+          <span class="brand-copy"><span class="eyebrow">NAIL DESIGNER</span><strong>Josi Maria</strong></span>
+        </a>
+        <a class="instagram-link" href="https://www.instagram.com/josimaria_naildesigner/" target="_blank" rel="noopener noreferrer">
+          Instagram <span aria-hidden="true">↗</span>
+        </a>
+        <button class="instagram-link" id="btn-sair" type="button" style="cursor:pointer">Sair</button>
+      </header>
+      <div id="sess-bar" class="sess-bar" hidden>
+        <strong id="sess-prof">Carregando…</strong>
+        <span id="sess-sub"></span>
+      </div>
+      <div id="sync-bar" class="sync-bar" hidden></div>
+
+      <main id="inicio">
+        <section class="welcome-card" aria-labelledby="welcome-title">
+          <div class="welcome-copy">
+            <span class="eyebrow">SEU MOMENTO DE CUIDADO</span>
+            <h1 id="welcome-title">Beleza em cada detalhe.</h1>
+            <p>Organize seus atendimentos com carinho e deixe cada horário no lugar.</p>
+            <a class="welcome-link" href="../agendar/" target="_blank" rel="noopener noreferrer">Abrir página pública <span aria-hidden="true">↗</span></a>
+          </div>
+          <div class="welcome-art" aria-hidden="true"><span>✳</span><i></i></div>
+        </section>
+
+        <section class="stats-row" aria-label="Resumo do mês">
+          <article class="stat-card"><span class="stat-icon">♡</span><div><strong id="month-count">0</strong><span>atendimentos no mês</span></div></article>
+          <article class="stat-card"><span class="stat-icon">◷</span><div><strong id="next-count">0</strong><span>horários livres no dia</span></div></article>
+        </section>
+
+        <section class="panel billing-panel" aria-labelledby="billing-title">
+          <div class="section-heading billing-heading">
+            <div><span class="eyebrow">VISÃO DO MÊS</span><h2 id="billing-title">Faturamento</h2></div>
+            <div class="billing-month-control" aria-label="Mês do faturamento">
+              <button class="icon-button" id="billing-previous-month" type="button" aria-label="Mês anterior">‹</button>
+              <span id="billing-month" class="billing-month-label"></span>
+              <button class="icon-button" id="billing-next-month" type="button" aria-label="Próximo mês">›</button>
+            </div>
+          </div>
+          <div class="billing-cards" aria-live="polite">
+            <article class="billing-card billing-card-total">
+              <span>Faturamento do mês</span>
+              <strong id="billing-total">R$ 0,00</strong>
+            </article>
+            <article class="billing-card">
+              <span>Atendimentos</span>
+              <strong id="billing-count">0</strong>
+            </article>
+            <article class="billing-card">
+              <span>Ticket médio</span>
+              <strong id="billing-average">R$ 0,00</strong>
+            </article>
+          </div>
+          <section class="billing-breakdown" aria-labelledby="procedure-revenue-title">
+            <div class="billing-subheading">
+              <h3 id="procedure-revenue-title">Faturamento por procedimento</h3>
+              <span id="procedure-revenue-count"></span>
+            </div>
+            <div id="procedure-revenue-list" class="procedure-revenue-list">
+              <p class="empty-state">Os procedimentos do mês aparecerão aqui.</p>
+            </div>
+          </section>
+          <p class="billing-history-note" id="billing-history-note">
+            Agendamentos anteriores à ativação podem não ter valor histórico registrado. Novos agendamentos usam o preço do procedimento no momento da criação.
+          </p>
+        </section>
+
+        <section class="panel calendar-panel" aria-labelledby="calendar-title">
+          <div class="section-heading calendar-heading">
+            <div><span class="eyebrow">VISÃO GERAL</span><h2 id="calendar-title">Sua agenda</h2></div>
+            <div class="month-control">
+              <button class="icon-button" id="previous-month" type="button" aria-label="Mês anterior">‹</button>
+              <label class="month-label"><span id="month-label"></span><input id="month-picker" type="month" aria-label="Escolher mês" /></label>
+              <button class="icon-button" id="next-month" type="button" aria-label="Próximo mês">›</button>
+            </div>
+          </div>
+          <div class="calendar-grid" id="calendar-grid" aria-label="Calendário do mês"></div>
+          <div class="day-detail" id="day-detail" aria-live="polite"></div>
+          <div class="calendar-footer"><span><i class="legend-dot"></i> dia com atendimento</span><button class="text-button danger-text" id="clear-month" type="button">Limpar mês</button></div>
+        </section>
+
+        <section class="panel availability-panel" aria-labelledby="availability-title">
+          <div class="section-heading">
+            <div><span class="eyebrow">HORÁRIOS E FOLGAS</span><h2 id="availability-title">Disponibilidade</h2></div>
+          </div>
+          <details class="availability-details">
+            <summary>Configurar expediente semanal</summary>
+            <p class="availability-help">Defina os dias atendidos, o expediente, a duração entre horários e uma pausa por dia. O intervalo pode ser ajustado em blocos de minutos.</p>
+            <form id="hours-form">
+              <div id="weekly-hours" class="weekly-hours"></div>
+              <button class="primary-button" type="submit">Salvar horários</button>
+              <p id="hours-status" class="form-message" role="status" aria-live="polite"></p>
+            </form>
+          </details>
+          <div class="blocked-days">
+            <div class="availability-subheading"><h3>Datas bloqueadas</h3><span>folgas e indisponibilidades</span></div>
+            <form id="blocked-date-form" class="blocked-date-form">
+              <label class="field"><span>Data</span><input id="blocked-date" type="date" required /></label>
+              <label class="field"><span>Motivo <small>opcional</small></span><input id="blocked-reason" type="text" maxlength="100" placeholder="Ex.: folga" /></label>
+              <button class="secondary-action" type="submit">Bloquear data</button>
+            </form>
+            <div id="blocked-date-list" class="blocked-date-list"><p class="empty-state">Nenhuma data bloqueada.</p></div>
+            <p id="availability-status" class="form-message" role="status" aria-live="polite"></p>
+          </div>
+          <div class="whatsapp-settings">
+            <div class="availability-subheading">
+              <h3>Confirmação pelo WhatsApp</h3>
+              <span>mensagem pronta após cada reserva</span>
+            </div>
+            <p class="availability-help">Informe o número da Josi com DDD. Depois de reservar, a cliente será direcionada ao WhatsApp com os dados do agendamento para tocar em enviar.</p>
+            <form id="whatsapp-form" class="whatsapp-form">
+              <label class="field" for="professional-whatsapp"><span>Número do WhatsApp</span><input id="professional-whatsapp" type="tel" inputmode="tel" autocomplete="tel" maxlength="30" placeholder="(11) 99999-9999" required /></label>
+              <button class="secondary-action" type="submit">Salvar número</button>
+            </form>
+            <p id="whatsapp-status" class="form-message" role="status" aria-live="polite"></p>
+          </div>
+        </section>
+
+        <section class="panel booking-panel" id="novo-agendamento" aria-labelledby="booking-title">
+          <div class="section-heading">
+            <div><span class="eyebrow">UM NOVO CARINHO</span><h2 id="booking-title">Agendar cliente</h2></div>
+            <span class="section-flower" aria-hidden="true">✳</span>
+          </div>
+          <form id="booking-form" class="booking-form">
+            <label class="field"><span>Nome da cliente</span><input name="nome" type="text" placeholder="Ex.: Ana Souza" autocomplete="name" maxlength="80" required /></label>
+            <label class="field"><span>Procedimento</span><select name="servico" required><option value="">Carregando procedimentos…</option></select></label>
+            <div class="service-price" aria-live="polite">
+              <span>Valor do procedimento</span>
+              <strong id="service-price">Selecione um procedimento</strong>
+            </div>
+            <div class="form-row">
+              <label class="field"><span>Data</span><input id="booking-date" name="data" type="date" required /></label>
+              <label class="field"><span>Horário</span><select id="booking-time" name="horario" required><option value="">Escolha a data</option></select></label>
+            </div>
+            <label class="field"><span>Telefone <small>opcional</small></span><input name="telefone" type="tel" placeholder="(11) 99999-1234" autocomplete="tel" maxlength="30" /></label>
+            <label class="field"><span>Observações <small>opcional</small></span><textarea name="observacoes" rows="3" placeholder="Detalhes do atendimento..." maxlength="400"></textarea></label>
+            <button class="primary-button" type="submit"><span aria-hidden="true">＋</span> Salvar agendamento</button>
+            <p class="form-message" id="form-message" role="status" aria-live="polite"></p>
+          </form>
+        </section>
+
+        <section class="panel appointments-panel" aria-labelledby="appointments-title">
+          <div class="section-heading list-heading">
+            <div><span class="eyebrow">SEUS COMPROMISSOS</span><h2 id="appointments-title">Atendimentos do mês</h2></div>
+            <span class="list-total" id="list-total">0</span>
+          </div>
+          <div class="appointments-list" id="appointments-list"></div>
+        </section>
+      </main>
+      <footer class="page-footer">Feito com carinho <span aria-hidden="true">♡</span></footer>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>
