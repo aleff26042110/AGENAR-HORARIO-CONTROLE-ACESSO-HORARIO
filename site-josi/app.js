@@ -449,8 +449,8 @@
     root.replaceChildren();
     DAY_NAMES.forEach((day, weekday) => {
       const schedule = workingHours.find((item) => Number(item.weekday) === weekday) || {
-        weekday, ativo: weekday >= 1 && weekday <= 6, inicio: '09:00', fim: '18:00',
-        intervalo_min: 30, pausa_inicio: null, pausa_fim: null,
+        weekday, ativo: weekday >= 1 && weekday <= 6, inicio: '08:00', fim: '18:00',
+        intervalo_min: 150, pausa_inicio: null, pausa_fim: null,
       };
       const row = document.createElement('div');
       row.className = 'week-row';
@@ -469,9 +469,9 @@
       row.append(checkLabel);
 
       const fields = [
-        ['Abre', 'start', 'time', normTime(schedule.inicio) || '09:00'],
+        ['Abre', 'start', 'time', normTime(schedule.inicio) || '08:00'],
         ['Fecha', 'end', 'time', normTime(schedule.fim) || '18:00'],
-        ['Intervalo (min)', 'interval', 'number', String(schedule.intervalo_min || 30)],
+        ['Intervalo (min)', 'interval', 'number', String(schedule.intervalo_min || 150)],
         ['Pausa começa', 'break-start', 'time', normTime(schedule.pausa_inicio)],
         ['Pausa termina', 'break-end', 'time', normTime(schedule.pausa_fim)],
       ];

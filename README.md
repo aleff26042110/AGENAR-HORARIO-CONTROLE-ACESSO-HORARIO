@@ -20,7 +20,8 @@ Em GitHub Pages de um repositório, os endereços ficam sob o caminho do reposit
 4. Execute `supabase/migrations/20261008_public_booking.sql` no SQL Editor. Ela adiciona o expediente, bloqueios, duração dos atendimentos e RPCs de agendamento. É incremental e não apaga agendamentos.
 5. Execute também `supabase/migrations/20261008_whatsapp_confirmation.sql` para habilitar a confirmação pelo WhatsApp.
 6. Execute `supabase/migrations/20261008_whatsapp_josi_phone.sql` para gravar o número de WhatsApp informado para a Josi. Ela pode alterá-lo depois no painel privado.
-7. Em **Project Settings → API**, copie a URL do projeto e a chave pública `anon`/publishable. Nunca use `service_role` no navegador, nos arquivos do site ou neste README.
+7. Execute `supabase/migrations/20261015_josi_hours_services.sql` para atualizar somente a Josi: expediente das 08:00 às 18:00, intervalo e duração dos procedimentos de 150 minutos e os cinco procedimentos/valores solicitados. Mantém dias ativos, pausas, folgas e agendamentos anteriores. Pode ser executada novamente sem inserir novos registros dos mesmos procedimentos.
+8. Em **Project Settings → API**, copie a URL do projeto e a chave pública `anon`/publishable. Nunca use `service_role` no navegador, nos arquivos do site ou neste README.
 
 As RPCs públicas retornam somente nome/identidade pública, o WhatsApp escolhido para reservas, procedimentos ativos e horários livres. A cliente não recebe acesso direto às tabelas de clientes, agendamentos, faturamento ou assinaturas. O painel da Josi continua fazendo operações autenticadas sob RLS. A reserva anônima reutiliza o registro de cliente correspondente ao telefone, quando existe, sem sobrescrever os dados de contato já cadastrados.
 
@@ -57,7 +58,8 @@ O status da profissional e a assinatura mais recente precisam estar ativos para 
 
 - Cadastre/edite procedimentos na área administrativa existente; somente procedimentos ativos com preço e duração válidos aparecem para a cliente.
 - No painel da Josi, abra **Disponibilidade → Configurar expediente semanal**. Para cada dia, marque se atende e configure abertura, fechamento, intervalo entre inícios de atendimento e, opcionalmente, uma pausa.
-- O expediente inicial é segunda a sábado, das 09:00 às 18:00, com intervalos de 30 minutos; domingo começa inativo. Ajuste esses valores antes de compartilhar o link.
+- Após a migração de 15/10/2026, o expediente da Josi é das 08:00 às 18:00, em blocos de 2h30: 08:00, 10:30, 13:00 e 15:30. Os dias atendidos e as pausas existentes são mantidos; dias sem configuração começam com segunda a sábado ativos e domingo inativo. Reservas, pausas e folgas podem reduzir os horários disponíveis.
+- O catálogo acrescenta ou atualiza Banho de gel (R$ 120), Blindagem (R$ 80), Pé e mão (R$ 60), Só mão (R$ 35) e Só pé (R$ 40). Os procedimentos ativos passam a ter duração de 150 minutos para novas reservas, mantendo os valores dos demais serviços e o histórico dos atendimentos.
 - Em **Datas bloqueadas**, registre folgas ou dias sem atendimento. É possível remover um bloqueio pelo próprio painel.
 - Em **Confirmação pelo WhatsApp**, salve o número público da Josi. Quando uma reserva for criada, a cliente será encaminhada ao WhatsApp com nome, telefone, procedimento, preço, data, horário e observações preenchidos; ela ainda precisa tocar em **Enviar**.
 - A disponibilidade respeita a duração do procedimento, o expediente, a pausa, as reservas já existentes e os bloqueios. O banco serializa as tentativas e rejeita sobreposição mesmo se duas clientes confirmarem quase ao mesmo tempo.

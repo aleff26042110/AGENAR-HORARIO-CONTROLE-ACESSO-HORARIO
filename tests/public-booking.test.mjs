@@ -18,6 +18,25 @@ test('gera inícios em intervalos definidos e respeita a duração até o fecham
   assert.equal(slots.length, 17);
 });
 
+test('expediente da Josi oferece quatro atendimentos de 2h30 entre 08h e 18h', () => {
+  const slots = availableSlots({
+    date: '2099-10-08',
+    schedule: { ...schedule, inicio: '08:00', intervalo_min: 150 },
+    durationMin: 150,
+  });
+  assert.deepEqual(slots, ['08:00', '10:30', '13:00', '15:30']);
+});
+
+test('blocos de 2h30 respeitam reservas antigas fora da nova grade e pausas', () => {
+  const slots = availableSlots({
+    date: '2099-10-08',
+    schedule: { ...schedule, inicio: '08:00', intervalo_min: 150, pausa_inicio: '12:00', pausa_fim: '13:00' },
+    durationMin: 150,
+    appointments: [{ data: '2099-10-08', horario: '09:00', duracao_min: 60 }],
+  });
+  assert.deepEqual(slots, ['13:00', '15:30']);
+});
+
 test('remove horários que cruzam uma pausa de almoço', () => {
   const slots = availableSlots({
     date: '2099-10-08',
